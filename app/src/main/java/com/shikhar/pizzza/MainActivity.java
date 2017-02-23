@@ -7,7 +7,6 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.Toast;
 
 import com.shikhar.pizzza.model.ExcludeList;
 import com.shikhar.pizzza.model.PizzaResponse;
@@ -24,23 +23,20 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.GET;
 
-import static android.media.CamcorderProfile.get;
-import static android.os.Build.ID;
-
-
 public class MainActivity extends AppCompatActivity {
 
     public static final String BASE_URL = "https://api.myjson.com/";
 
-    List<VariantGroup> mlistVariantGroup = new ArrayList<>();
-    List<Variation> mlistVariations = new ArrayList<>();
-    List<List<ExcludeList>> mlistExcludeList = new ArrayList<>();
+    List<VariantGroup> mListVariantGroup = new ArrayList<>();
+    List<Variation> mListVariations = new ArrayList<>();
+    List<List<ExcludeList>> mListExcludeList = new ArrayList<>();
 
     LinearLayout mLinearLayout;
-
     RadioGroup rg;
     RadioButton[] rb;
 
+    //this List will store those radio buttons which are supposed to be hidden because of a match in exclude_list
+    List<RadioButton> mHiddenButtons = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,18 +48,19 @@ public class MainActivity extends AppCompatActivity {
         callWebService();
     }
 
+    //Retrofit Interface
     public interface PizzaApiEndpointInterface {
         @GET("bins/3b0u2")
         Call<PizzaResponse> getVariantsExcludeList();
     }
 
-    void callWebService (){
+    void callWebService() {
 
+        //create Retrofit Instance
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
-
 
         PizzaApiEndpointInterface serviceRequest = retrofit.create(PizzaApiEndpointInterface.class);
 
@@ -75,45 +72,49 @@ public class MainActivity extends AppCompatActivity {
 
                 int status = response.code();
 
+                //check status code. If its NOT OK(i.e. !200) then return from the function
                 if (status != 200) {
                     Log.d("Status code NOT Ok. ", "Status Code: " + status);
-                    return ;
+                    return;
                 }
 
-                mlistVariantGroup = response.body().getVariants().getVariantGroups();
-                mlistExcludeList  =  response.body().getVariants().getExcludeList();
+                //get List of variant_groups and list of exclude_list from the JSON response that you got
+                mListVariantGroup = response.body().getVariants().getVariantGroups();
+                mListExcludeList = response.body().getVariants().getExcludeList();
 
-                for (int i = 0 ; i < mlistVariantGroup.size(); i++){
+                //iterate through each variant_group inside variant_groups array
+                for (int i = 0; i < mListVariantGroup.size(); i++) {
 
+                    //create a RadioGroup for each variant_group
                     rg = new RadioGroup(MainActivity.this);
-                    rg.setOrientation(RadioGroup.HORIZONTAL);
+                    rg.setOrientation(RadioGroup.VERTICAL);
+                    rg.setId(1000 + i); //set the ID for RadioGroup. 1000(or any random number) + i(0,1,..)
+
                     mLinearLayout.addView(rg);
-                    //rg.setId(Integer.parseInt(mlistVariantGroup.get(i).getGroupId()));
 
-                    //int id = rg.getId();
-                    //rg.setTag(mlistVariantGroup.get(i).getName());
+                    //get the list of variations under each variant_group
+                    mListVariations = mListVariantGroup.get(i).getVariations();
 
+                    rb = new RadioButton[mListVariations.size()];
 
-                    mlistVariations = mlistVariantGroup.get(i).getVariations();
+                    //iterate through each variation under a particular variant_group
+                    for (int j = 0; j < mListVariations.size(); j++) {
 
-                    rb = new RadioButton[mlistVariations.size()];
-                    for(int j = 0; j < mlistVariations.size(); j++){
-
+                        //create  RadioButton for each variation inside a particular variant_group
                         rb[j] = new RadioButton(MainActivity.this);
-                        rb[j].setText(mlistVariations.get(j).getName());
+                        rb[j].setText(mListVariations.get(j).getName());
+                        rb[j].setId(Integer.parseInt(mListVariations.get(j).getId()));
 
-                        rb[j].setId(Integer.parseInt(mlistVariations.get(j).getId()));
-                        rb[j].setTag(mlistVariantGroup.get(i).getGroupId());
+                        //add some additional data as tag to radio button TagFormat:("group_id","radio_group_id")
+                        //group_id (before , in Tag) helps us to know the group_id associated with a variation
+                        //radio_group_id (after , in Tag) helps us to know the parent RadioGroup for the radio button
+                        rb[j].setTag(mListVariantGroup.get(i).getGroupId() + "," + rg.getId());
 
+                        //attach click listener to each radio buttons
                         rb[j].setOnClickListener(mThisButtonListener);
-
 
                         rg.addView(rb[j]);
                     }
-
-
-                   // rg.setId(Integer.parseInt(mlistVariantGroup.get(i).getGroupId()));
-                    rg.setTag(mlistVariantGroup.get(i).getGroupId());
                 }
             }
 
@@ -124,48 +125,69 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    //un-hide the radio button(which were hidden because of a match in exclude_list) when a new click is performed
+    void unHideButtons(String currentClickedRadioGroupId) {
+
+        for (RadioButton rb : mHiddenButtons) {
+
+            //make each radio button visible which were previously Invisible because of exclude_list
+            rb.setVisibility(View.VISIBLE);
+
+            //get the radio group id of that radio button which was previously invisible
+            String tag = (String) rb.getTag();
+            String[] parts = tag.split(",");
+            String radioGroupID = parts[1];
+
+            //if the radio group(say id:1000) of the above radio button doesn't matches the radio group(say id:2000) which is just clicked
+            //then un-check all radio buttons corresponding to the radio group id:1000
+            if (!currentClickedRadioGroupId.equals((radioGroupID))) {
+                RadioGroup rg = (RadioGroup) findViewById(Integer.parseInt(radioGroupID));
+                rg.clearCheck();
+            }
+        }
+    }
+
     private View.OnClickListener mThisButtonListener = new View.OnClickListener() {
+
         public void onClick(View v) {
 
-            //v.setVisibility(View.GONE);
-            String group_id = (String)v.getTag();
-            int variation_id = v.getId();
+            String tag = (String) v.getTag(); //TagFormat: (group_id, radio_group_id) ex:(1,1000)
+            String[] parts = tag.split(",");
+            String group_id = parts[0];  //group_id of currently clicked radio button
+            String radioGroupID = parts[1];
 
-          //  Toast.makeText(MainActivity.this, "G_Id/Tag: " + group_id +" Variation_ID: " + variation_id, Toast.LENGTH_SHORT).show();
+            //un-hide the radio buttons and clear the mHiddenButtons List
+            unHideButtons(radioGroupID);
+            mHiddenButtons.clear();
 
-            ExcludeList element = new ExcludeList(group_id, Integer.toString(variation_id));
+            int variation_id = v.getId(); //variation id of currently clicked radio button
 
-            //Toast.makeText(MainActivity.this, element.getGroupId()+" "+element.getVariationId(), Toast.LENGTH_SHORT).show();
+            for (int i = 0; i < mListExcludeList.size(); i++) {
+                //get the first,second and so on... "exclude_list" JSON array
+                List<ExcludeList> excludeListPair = mListExcludeList.get(i);
 
+                //iterate through each JSON array(above)
+                for (int j = 0; j < excludeListPair.size(); j++) {
 
-            for(int i = 0; i < mlistExcludeList.size(); i++){
-                List<ExcludeList> excludeListPair = mlistExcludeList.get(i);
-
-                for(int j = 0; j < excludeListPair.size(); j++) {
-
+                    //compare "group_id & variation_id" of each member in JSON array
+                    // with "group_id & variation_id" of currently clicked radio button
                     if (excludeListPair.get(j).getGroupId().equals(group_id) &&
                             excludeListPair.get(j).getVariationId().equals(Integer.toString(variation_id))) {
 
+                        //if it's a match, iterate through each JSON object inside the exclude_list array
+                        for (int k = 0; k < excludeListPair.size(); k++) {
 
-                    //if(excludeListPair.contains(element)){
-                    Toast.makeText(MainActivity.this, "yes", Toast.LENGTH_SHORT).show();
-                    // }
-
-                        for( int k = 0; k < excludeListPair.size(); k++){
-
-                            if(k == j)
+                            if (k == j)
                                 continue;
 
-                            String g_id = excludeListPair.get(k).getGroupId();
                             int var_id = Integer.parseInt(excludeListPair.get(k).getVariationId());
 
-                            RadioButton rd = (RadioButton)findViewById(var_id);
-                            if(rd.getTag().equals(g_id)){
-                               rd.setVisibility(View.GONE);
-                            }
-
+                            //find the radio button corresponding to above variation_id and make it invisible.
+                            //Also add it to mHiddenButtons List.
+                            RadioButton rb = (RadioButton) findViewById(var_id);
+                            mHiddenButtons.add(rb);
+                            rb.setVisibility(View.INVISIBLE);
                         }
-
                     }
                 }
             }
