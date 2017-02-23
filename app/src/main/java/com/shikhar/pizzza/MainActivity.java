@@ -3,10 +3,12 @@ package com.shikhar.pizzza;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.TextView;
 
 import com.shikhar.pizzza.model.ExcludeList;
 import com.shikhar.pizzza.model.PizzaResponse;
@@ -85,9 +87,13 @@ public class MainActivity extends AppCompatActivity {
                 //iterate through each variant_group inside variant_groups array
                 for (int i = 0; i < mListVariantGroup.size(); i++) {
 
+                    //display the name of Radio Group
+                    showRadioGroupName(mListVariantGroup.get(i).getName());
+
                     //create a RadioGroup for each variant_group
                     rg = new RadioGroup(MainActivity.this);
                     rg.setOrientation(RadioGroup.VERTICAL);
+                    rg.setPadding(24, 0, 0, 24); //set padding fot the radio group
                     rg.setId(1000 + i); //set the ID for RadioGroup. 1000(or any random number) + i(0,1,..)
 
                     mLinearLayout.addView(rg);
@@ -102,7 +108,13 @@ public class MainActivity extends AppCompatActivity {
 
                         //create  RadioButton for each variation inside a particular variant_group
                         rb[j] = new RadioButton(MainActivity.this);
-                        rb[j].setText(mListVariations.get(j).getName());
+
+                        rb[j].setPadding(8, 0, 0, 0);
+
+                        rb[j].setText(mListVariations.get(j).getName() + " " +
+                                "(Price: " + mListVariations.get(j).getPrice() + ", " +
+                                "InStock: " + mListVariations.get(j).getInStock() + ")");
+
                         rb[j].setId(Integer.parseInt(mListVariations.get(j).getId()));
 
                         //add some additional data as tag to radio button TagFormat:("group_id","radio_group_id")
@@ -147,13 +159,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //display the Radio Group Name (Crust, Size etc.)
+    void showRadioGroupName(String name) {
+
+        TextView view = new TextView(this);
+        view.setText(name);
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
+        mLinearLayout.addView(view);
+    }
+
     private View.OnClickListener mThisButtonListener = new View.OnClickListener() {
 
         public void onClick(View v) {
 
             String tag = (String) v.getTag(); //TagFormat: (group_id, radio_group_id) ex:(1,1000)
             String[] parts = tag.split(",");
-            String group_id = parts[0];  //group_id of currently clicked radio button
+            String group_id = parts[0];      //group_id of currently clicked radio button
             String radioGroupID = parts[1];
 
             //un-hide the radio buttons and clear the mHiddenButtons List
