@@ -87,14 +87,14 @@ public class MainActivity extends AppCompatActivity {
                 //iterate through each variant_group inside variant_groups array
                 for (int i = 0; i < mListVariantGroup.size(); i++) {
 
-                    //display the name of Radio Group
+                    //display the name of Radio Group for each group(crust,size,sauce) inside "variant_groups"
                     showRadioGroupName(mListVariantGroup.get(i).getName());
 
                     //create a RadioGroup for each variant_group
                     rg = new RadioGroup(MainActivity.this);
                     rg.setOrientation(RadioGroup.VERTICAL);
-                    rg.setPadding(24, 0, 0, 24); //set padding fot the radio group
-                    rg.setId(1000 + i); //set the ID for RadioGroup. 1000(or any random number) + i(0,1,..)
+                    rg.setPadding(24, 0, 0, 24); //set desired padding for the radio group
+                    rg.setId(1000 + i);         //set the ID for RadioGroup. {1000(or any random number) + i(0,1,..)}
 
                     mLinearLayout.addView(rg);
 
@@ -118,8 +118,8 @@ public class MainActivity extends AppCompatActivity {
                         rb[j].setId(Integer.parseInt(mListVariations.get(j).getId()));
 
                         //add some additional data as tag to radio button TagFormat:("group_id","radio_group_id")
-                        //group_id (before , in Tag) helps us to know the group_id associated with a variation
-                        //radio_group_id (after , in Tag) helps us to know the parent RadioGroup for the radio button
+                        //group_id (before comma(,) in Tag) helps us to know the group_id associated with a variation
+                        //radio_group_id (after comma(,) in Tag) helps us to know the parent RadioGroup for the radio button
                         rb[j].setTag(mListVariantGroup.get(i).getGroupId() + "," + rg.getId());
 
                         //attach click listener to each radio buttons
@@ -137,12 +137,12 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    //un-hide the radio button(which were hidden because of a match in exclude_list) when a new click is performed
+    //un-hide the radio buttons(which were hidden because of a match in exclude_list) when a new click is performed
     void unHideButtons(String currentClickedRadioGroupId) {
 
         for (RadioButton rb : mHiddenButtons) {
 
-            //make each radio button visible which were previously Invisible because of exclude_list
+            //make radio button visible which was previously invisible because of exclude_list
             rb.setVisibility(View.VISIBLE);
 
             //get the radio group id of that radio button which was previously invisible
@@ -175,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
             String tag = (String) v.getTag(); //TagFormat: (group_id, radio_group_id) ex:(1,1000)
             String[] parts = tag.split(",");
             String group_id = parts[0];      //group_id of currently clicked radio button
-            String radioGroupID = parts[1];
+            String radioGroupID = parts[1];  //RadioGroup_Id of the currently clicked RadioButton
 
             //un-hide the radio buttons and clear the mHiddenButtons List
             unHideButtons(radioGroupID);
@@ -184,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
             int variation_id = v.getId(); //variation id of currently clicked radio button
 
             for (int i = 0; i < mListExcludeList.size(); i++) {
+
                 //get the first,second and so on... "exclude_list" JSON array
                 List<ExcludeList> excludeListPair = mListExcludeList.get(i);
 
@@ -195,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
                     if (excludeListPair.get(j).getGroupId().equals(group_id) &&
                             excludeListPair.get(j).getVariationId().equals(Integer.toString(variation_id))) {
 
-                        //if it's a match, iterate through each JSON object inside the exclude_list array
+                        //if it's a match, iterate through each JSON object inside the 'j'th element of exclude_list array
                         for (int k = 0; k < excludeListPair.size(); k++) {
 
                             if (k == j)
